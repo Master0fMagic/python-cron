@@ -8,14 +8,18 @@ import config
 
 
 def get_configs():
+    
     configs = {}
+    
     if config.CRONTAB_PATH == '' :
         configs['crontab_path'] = config.DEFAULT_CRONTAB_PATH
+    
     else:
         configs['crontab_path'] = config.CRONTAB_PATH
     
     if config.LOGS_PATH == '':
         configs['logs_path']= config.DEFAULT_LOGS_PATH
+    
     else: 
         configs['logs_path'] = config.LOGS_PATH
     
@@ -32,6 +36,7 @@ def run_cron():
             format = str(cron[i]).split(' ')
             if format[0] == '#':
                 continue
+
             command_time = ''.join(s + ' ' for s in format[0:5] ).strip()
             command = ''.join(s + ' ' for s in format[5:]).strip()
             
@@ -43,9 +48,10 @@ def run_cron():
                     else:
                         subprocess.run(command, shell=True)
                         os._exit(pid)
+
             except Exception as e:
-                file = open(configs['logs_path'],'w')
-                file.write(f'[{datetime.now()}]: {str(e)}')
+                file = open(configs['logs_path'],'a')
+                file.write(f'[{datetime.now()}]: {str(e)}\n')
                 file.close()
 
         time.sleep(60 - datetime.now().second)
