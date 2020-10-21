@@ -30,4 +30,4 @@ HOME = /
 */1 * * * *  echo "Every minute"
 */2 * * * *  echo "every 2 minutes"
 */5 * * * *  echo "every 5 minutes"
-44 * * * *  echo "every 41 minutes"
+44 * * * *  echo "at 44 minutes every hour"
