@@ -6,3 +6,4 @@ share
 pyvenv.cfg
 lib
 logs/*
+test.py

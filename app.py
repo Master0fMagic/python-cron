@@ -26,12 +26,40 @@ def get_configs():
     return configs
 
 
+def log_info(message, path):
+    
+    file = open(path,'a')
+    file.write(f'Info: [{datetime.utcnow()} UTC]: {message}\n')
+    file.close()
+    
+        
+def log_error(message, path):
+    
+    file = open(path,'a')
+    file.write(f'Error: [{datetime.utcnow()} UTC]: {message}\n')
+    file.close()
+
+
+def is_same_datetime(date):
+    return date == get_date_dict()
+
+
+def get_date_dict():
+    return {'hours':datetime.now().hour,
+        'minutes': datetime.now().minute,
+        'day':datetime.now().day,
+        'month':datetime.now().month}
+
+
 def run_cron():
 
     configs = get_configs()
     cron = CronTab(tabfile=configs['crontab_path'])
 
     while True:
+        
+        date = get_date_dict()
+        
         for i in range(len(cron)):
             format = str(cron[i]).split(' ')
             if format[0] == '#':
@@ -47,14 +75,17 @@ def run_cron():
                         continue
                     else:
                         subprocess.run(command, shell=True)
+                        log_info(f'Command: {command}', configs['logs_path'])
                         os._exit(pid)
 
             except Exception as e:
-                file = open(configs['logs_path'],'a')
-                file.write(f'[{datetime.now()}]: {str(e)}\n')
-                file.close()
-
-        time.sleep(60 - datetime.now().second)
+                log_error(f'{str(e)}. Command: {command}', configs['logs_path'])
+        
+        sleep_time = (60 - datetime.now().second)/5
+        
+        while is_same_datetime(date):
+            time.sleep(sleep_time)
+        
 
 
 if __name__ == "__main__":
