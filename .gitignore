@@ -1,5 +1,4 @@
 # created by virtualenv automatically
-*
 bin
 __pycache__
 data
@@ -8,4 +7,4 @@ share
 pyvenv.cfg
 lib
 logs/*
-test.py
+
