@@ -28,7 +28,10 @@ def get_configs():
 
 
 def get_job_objects(cron):
-    '''returns a list of {schedule, next_execute_time, command} objects'''
+    '''returns a list of {schedule, next_execute_time, command} objects
+    schedule is a croniter object
+    next_execute_time - datetime object which stores when should a job be executed next time
+    command - command to execute'''
     job_objects = list()
     time = datetime.now() - timedelta(minutes = 1)
     try:
@@ -45,13 +48,15 @@ def get_job_objects(cron):
 def setup():
     if not os.path.exists('logs'):
         os.mkdir('logs')
-
-
-def run_cron():
-    setup()
     configs = get_configs()
     cron = CronTab(tabfile=configs['crontab_path'])
     job_objects = get_job_objects(cron)
+    return job_objects
+
+
+def run_cron():
+    job_objects = setup()
+        
     childrens = list()
     
     while True:
