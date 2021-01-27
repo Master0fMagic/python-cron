@@ -1,10 +1,10 @@
 from crontab import CronTab
 from croniter import croniter
-from datetime import datetime
+from datetime import datetime, timedelta
 import subprocess
 import os
-import time
 import config
+import signal
 
 
 def get_configs():
@@ -26,67 +26,60 @@ def get_configs():
     return configs
 
 
-def log_info(message, path):
-    
-    file = open(path,'a')
-    file.write(f'Info: [{datetime.utcnow()} UTC]: {message}\n')
-    file.close()
-    
-        
-def log_error(message, path):
-    
-    file = open(path,'a')
-    file.write(f'Error: [{datetime.utcnow()} UTC]: {message}\n')
-    file.close()
+
+def get_job_objects(cron):
+    '''returns a list of {schedule, next_execute_time, command} objects'''
+    job_objects = list()
+    time = datetime.now() - timedelta(minutes = 1)
+    try:
+        for cron_row in cron:
+            schedule_row = cron_row.schedule(date_from = time)
+            job_objects.append({'schedule':schedule_row, 'next_execute_time':schedule_row.get_next(), 'command':cron_row.command})
+    except Exception as ex:
+        #log error
+        print(ex)
+    #log info
+    return job_objects
 
 
-def is_same_datetime(date):
-    return date == get_date_dict()
-
-
-def get_date_dict():
-    return {'hours':datetime.now().hour,
-        'minutes': datetime.now().minute,
-        'day':datetime.now().day,
-        'month':datetime.now().month}
+def setup():
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
 
 
 def run_cron():
-
+    setup()
     configs = get_configs()
     cron = CronTab(tabfile=configs['crontab_path'])
-
+    job_objects = get_job_objects(cron)
+    childrens = list()
+    
     while True:
-        
-        date = get_date_dict()
-        
-        for i in range(len(cron)):
-            format = str(cron[i]).split(' ')
-            if format[0] == '#':
-                continue
-
-            command_time = ''.join(s + ' ' for s in format[0:5] ).strip()
-            command = ''.join(s + ' ' for s in format[5:]).strip()
-            
-            try:
-                if croniter.match(command_time, datetime.now()):
-                    pid = os.fork() 
-                    if pid == 0:
+        try:
+            current_time = datetime.now()
+            for job in job_objects:
+                if job['next_execute_time'] <= current_time:
+                    job['next_execute_time'] = job['schedule'].get_next()
+                    pid = os.fork()
+                    if pid != 0:
+                        childrens.append(pid)
                         continue
-                    else:
-                        subprocess.run(command, shell=True)
-                        log_info(f'Command: {command}', configs['logs_path'])
-                        os._exit(pid)
+                    subprocess.run(job['command'], shell=True)
+                    os.kill(os.getpid(), signal.SIGTERM)
+                    #log info
+            for child in childrens:
+                os.waitpid(child,0)
+            childrens = list()
 
-            except Exception as e:
-                log_error(f'{str(e)}. Command: {command}', configs['logs_path'])
-        
-        sleep_time = (60 - datetime.now().second)/5
-        
-        while is_same_datetime(date):
-            time.sleep(sleep_time)
-        
-
+        except Exception as ex:
+            print(ex)
+            #log error
+  
 
 if __name__ == "__main__":
-    run_cron()
+    try:
+        run_cron()
+    except Exception as ex:
+        print(ex)
+        #log error
+        os.kill(os.getpid(), signal.SIGTERM)
